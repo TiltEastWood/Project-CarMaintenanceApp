@@ -1,0 +1,38 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@inherits LayoutComponentBase
+
+<div class="top-row ps-4 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">CarMaintenanceApp</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="nav flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="oi oi-home" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+        <Authorized>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="CarList">
+                    <span class="oi oi-list-rich" aria-hidden="true"></span> Car List
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="AddCar">
+                    <span class="oi oi-plus" aria-hidden="true"></span> Add Car
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="DeleteUser">
+                    <span class="oi oi-plus" aria-hidden="true"></span> Delete User
+                </NavLink>
+            </div>
+        </Authorized>
+    </nav>
+</div>
+

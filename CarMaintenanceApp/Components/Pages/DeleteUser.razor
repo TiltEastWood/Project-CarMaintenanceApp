@@ -1,0 +1,70 @@
+﻿@page "/DeleteUser"
+@using CarMaintenanceApp.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@attribute [Authorize]
+@inject UserService UserService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IHttpContextAccessor HttpContextAccessor
+@rendermode InteractiveServer
+
+<h3 class="mb-4">Delete User</h3>
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">Are you sure you want to delete your account?</h5>
+        <p class="card-text">This action will delete your user account and all associated cars. This action cannot be undone.</p>
+        <button @onclick="DeleteUserAndCars" class="btn btn-danger">Delete User and Cars</button>
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger mt-3">@errorMessage</div>
+        }
+    </div>
+</div>
+
+@code {
+    private string errorMessage;
+
+    private async Task DeleteUserAndCars()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var userIdClaim = user.FindFirst(ClaimTypes.Sid);
+                if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    bool result = await UserService.DeleteUserAndCarAsync(userId);
+                    if (result)
+                    {
+                        Navigation.NavigateTo("/login", forceLoad: true);
+                        await HttpContextAccessor.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                    }
+                    else
+                    {
+                        errorMessage = "Failed to delete user and cars.";
+                    }
+                }
+                else
+                {
+                    errorMessage = "User ID not found.";
+                }
+            }
+            else
+            {
+                errorMessage = "User is not authenticated.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+    }
+}

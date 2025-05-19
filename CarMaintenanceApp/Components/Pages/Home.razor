@@ -1,0 +1,57 @@
+﻿@page "/"
+@using CarMaintenanceApp.Models
+@using CarMaintenanceApp.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject CarService CarService
+@inject NavigationManager Navigation
+
+<PageTitle>Home</PageTitle>
+
+<h3>Cars Inspection Dates</h3>
+
+@if (cars == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!cars.Any())
+{
+    <p>No cars available.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Make</th>
+                <th>Model</th>
+                <th>Year</th>
+                <th>Number Plate</th>
+                <th>Inspection Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var car in cars)
+            {
+                var highlight = car.InspectionDate < DateTime.Now ? "table-danger" :
+                                car.InspectionDate <= DateTime.Now.AddDays(30) ? "table-warning" : "";
+                <tr class="@highlight">
+                    <td>@car.Make</td>
+                    <td>@car.Model</td>
+                    <td>@car.Year</td>
+                    <td>@car.LicensePlate</td>
+                    <td>@car.InspectionDate.ToShortDateString()</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Car>? cars;
+
+    protected override async Task OnInitializedAsync()
+    {
+        cars = await CarService.GetCarsAsync();
+    }
+}

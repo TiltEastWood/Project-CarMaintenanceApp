@@ -1,0 +1,156 @@
+﻿@page "/CarDetails/{carId:int}"
+@using CarMaintenanceApp.Models
+@using CarMaintenanceApp.Services
+@using Microsoft.AspNetCore.Components.Forms
+@inject CarService CarService
+@inject ServiceRecordService ServiceRecordService
+@inject NavigationManager Navigation
+@inject IHttpContextAccessor HttpContextAccessor
+@rendermode InteractiveServer
+
+<h3>Car Service History</h3>
+
+@if (car == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h4 class="card-title">@car.Make @car.Model</h4>
+            <p class="card-text">Year: @car.Year</p>
+            <p class="card-text">Color: @car.Color</p>
+            <p class="card-text">License Plate: @car.LicensePlate</p>
+            <p class="card-text">Inspection Date: @car.InspectionDate.ToShortDateString()</p>
+        </div>
+    </div>
+
+    <h4>Service Records</h4>
+    @if (car.ServiceRecords == null || !car.ServiceRecords.Any())
+    {
+        <p>No service records available.</p>
+    }
+    else
+    {
+        <div class="list-group">
+            @foreach (var record in car.ServiceRecords)
+            {
+                <div class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">@record.ServiceDate.ToShortDateString()</h5>
+                        <small>@record.Mileage miles</small>
+                    </div>
+                    <p class="mb-1">@record.Description</p>
+                    @if (record.Image != null)
+                    {
+                        <img src="data:image/png;base64,@Convert.ToBase64String(record.Image)" alt="Service Image" class="img-thumbnail" width="100" />
+                    }
+                    else if (!string.IsNullOrEmpty(record.ImagePath))
+                    {
+                        <img src="@record.ImagePath" alt="Service Image" class="img-thumbnail float-end ms-3" style="width: 200px;" />
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    <h4>Add Service Record</h4>
+    <div class="card mb-3">
+        <div class="card-body">
+            <EditForm Model="newServiceRecord" OnValidSubmit="AddServiceRecord">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="form-group mb-3">
+                    <label for="serviceDate">Service Date</label>
+                    <InputDate id="serviceDate" class="form-control" @bind-Value="newServiceRecord.ServiceDate" />
+                </div>
+                <div class="form-group mb-3">
+                    <label for="description">Description</label>
+                    <InputText id="description" class="form-control" @bind-Value="newServiceRecord.Description" />
+                </div>
+                <div class="form-group mb-3">
+                    <label for="mileage">Mileage</label>
+                    <InputNumber id="mileage" class="form-control" @bind-Value="newServiceRecord.Mileage" />
+                </div>
+                <div class="form-group mb-3">
+                    <label for="image">Service Image</label>
+                    <InputFile id="image" OnChange="HandleImageChange" />
+                </div>
+                <div class="progress mt-2">
+                    <div class="progress-bar" role="progressbar" style="width: @progress%" aria-valuenow="@progress" aria-valuemin="0" aria-valuemax="100">@progress%</div>
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">Add Service Record</button>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger mt-3">@errorMessage</div>
+                }
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int carId { get; set; }
+    private Car? car;
+    private ServiceRecord newServiceRecord = new();
+    private Stream? imageStream;
+    private int progress;
+    private string errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        newServiceRecord.ServiceDate = DateTime.Today;
+        await LoadCarDetails();
+    }
+    private async Task LoadCarDetails()
+    {
+        car = await CarService.GetCarByIdAsync(carId);
+        if (car != null)
+        {
+            car.ServiceRecords = await ServiceRecordService.GetServiceRecordsAsync(carId);
+            newServiceRecord.Mileage = car.Mileage;
+        }
+    }
+
+    private async Task AddServiceRecord()
+    {
+        newServiceRecord.CarId = carId;
+        var result = await ServiceRecordService.AddServiceRecordAsync(newServiceRecord, imageStream);
+        if (result.Success)
+        {
+            newServiceRecord = new ServiceRecord { ServiceDate = DateTime.Today, Mileage = car?.Mileage ?? 0 };
+            imageStream = null;
+            progress = 0;
+            errorMessage = string.Empty;
+            await LoadCarDetails();
+        }
+        else
+        {
+            errorMessage = result.ErrorMessage;
+        }
+    }
+    private async void HandleImageChange(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        var buffer = new byte[81920];
+        var totalRead = 0L;
+        var totalBytes = file.Size;
+
+        using var memoryStream = new MemoryStream();
+        using var stream = file.OpenReadStream(maxAllowedSize: 10485760);
+
+        int read;
+        while ((read = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+        {
+            totalRead += read;
+            await memoryStream.WriteAsync(buffer, 0, read);
+            progress = (int)((totalRead * 100) / totalBytes);
+            StateHasChanged();
+        }
+        imageStream = new MemoryStream(memoryStream.ToArray());
+    }
+}

@@ -1,0 +1,47 @@
+﻿@page "/DeleteCar/{carId:int}"
+@using CarMaintenanceApp.Models
+@using CarMaintenanceApp.Services
+@using Microsoft.AspNetCore.Authorization
+@inject CarService CarService
+@inject NavigationManager Navigation
+@inject ILogger<DeleteCar> logger
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+@code {
+    [Parameter]
+    public int carId { get; set; }
+    private Car? car;
+    protected override async Task OnInitializedAsync()
+    {
+        car = await CarService.GetCarByIdAsync(carId);
+    }
+
+    private async Task ConfirmDeleteCar()
+    {
+        await CarService.DeleteCarAsync(carId);
+        Navigation.NavigateTo("/CarList");
+    }
+    private async Task NavigateToCarList()
+    {
+        logger.LogWarning("aizgaja");   
+        Navigation.NavigateTo("/CarList");
+    }
+}
+
+<h3>DeleteCar</h3>
+
+@if (car == null)
+{
+<p><em>Loading...</em></p>
+}
+else
+{
+    <div>
+        <p>Are you sure you want to delete this car?</p>
+        <p><strong>@car.Make @car.Model</strong></p>
+        <button class="btn btn-danger" @onclick="ConfirmDeleteCar">Delete</button>
+        <button class="btn btn-secondary" @onclick="NavigateToCarList">Cancel</button>
+    </div>
+}
+

@@ -1,0 +1,72 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using CarMaintenanceApp.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@using Microsoft.AspNetCore.Http
+@using Microsoft.AspNetCore.Components.Authorization
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IHttpContextAccessor HttpContextAccessor
+@inject NavigationManager Navigation
+@inject UserService UserService
+@inject AuthServices AuthServices
+@inject ILogger<MainLayout> Logger
+@inherits LayoutComponentBase
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <AuthorizeView>
+                <NotAuthorized>
+                    <a href="/register">Register</a>
+                    <a href="/login">Login</a>
+                </NotAuthorized>
+                <Authorized>
+                    <div class="user-info">
+                        <span>Hello, @fullName!</span>
+                        <a class="btn btn-primary" href="/logout">Logout</a>
+                    </div>
+                </Authorized>
+            </AuthorizeView>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private string fullName;
+    private bool isAuthenticated;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        isAuthenticated = user.Identity?.IsAuthenticated ?? false;
+
+        if (isAuthenticated)
+        {
+            var firstName = user.FindFirst(c => c.Type == "FirstName")?.Value;
+            var lastName = user.FindFirst(c => c.Type == "LastName")?.Value;
+            fullName = $"{firstName} {lastName}";
+        }
+        else
+        {
+            fullName = string.Empty;
+        }
+    }
+}

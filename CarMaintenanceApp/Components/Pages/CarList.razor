@@ -1,0 +1,81 @@
+﻿@page "/CarList"
+@using Microsoft.AspNetCore.Authorization
+@using CarMaintenanceApp.Models
+@using CarMaintenanceApp.Services
+@attribute [Authorize]
+@inject CarService CarService
+@inject ServiceRecordService ServiceRecordService
+@inject NavigationManager Navigation
+@inject IHttpContextAccessor HttpContextAccessor
+@rendermode InteractiveServer
+
+<h3>CarList</h3>
+
+@if (cars == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Make</th>
+                <th>Model</th>
+                <th>Year</th>
+                <th>Color</th>
+                <th>License Plate</th>
+                <th>VIN</th>
+                <th>Mileage</th>
+                <th>Inspection Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var car in cars)
+            {
+                var highlight = car.InspectionDate < DateTime.Now ? "table-danger" : 
+                                car.InspectionDate <= DateTime.Now.AddDays(30) ? "table-warning" : "";
+                <tr class="@highlight">
+                    <td>@car.Make</td>
+                    <td>@car.Model</td>
+                    <td>@car.Year</td>
+                    <td>@car.Color</td>
+                    <td>@car.LicensePlate</td>
+                    <td>@car.VIN</td>
+                    <td>@car.Mileage</td>
+                    <td>@car.InspectionDate.ToShortDateString()</td>
+                    <td>
+                        <a href="@($"/CarDetails/{car.Id}")" class="btn btn-info btn-sm">View Details</a>    
+                        <a href="@($"/EditCar/{car.Id}")" class="btn btn-warning btn-sm">Edit</a>
+                        <a href="@($"/DeleteCar/{car.Id}")" class="btn btn-danger btn-sm">Delete</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Car> cars = new List<Car>();
+    private bool isAuthenticated = false;
+    private ServiceRecord newServiceRecord = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = HttpContextAccessor.HttpContext?.User;
+        isAuthenticated = user?.Identity?.IsAuthenticated ?? false;
+
+        if (!isAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+        }
+        else
+        {
+            cars = await CarService.GetCarsAsync();
+            foreach (var car in cars)
+            {
+                car.ServiceRecords = await ServiceRecordService.GetServiceRecordsAsync(car.Id);
+            }
+        }
+    }
+}

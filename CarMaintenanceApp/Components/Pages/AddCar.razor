@@ -1,0 +1,124 @@
+﻿@page "/AddCar"
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Antiforgery
+@attribute [RequireAntiforgeryToken(required: false)]
+@attribute [Authorize]
+@using CarMaintenanceApp.Models
+@using CarMaintenanceApp.Services
+@inject CarService CarService
+@inject NavigationManager Navigation
+@inject ILogger<AddCar> logger
+@inject IHttpContextAccessor HttpContextAccessor
+
+
+<h3>Add Car</h3>
+
+@if (!isAuthenticated)
+{
+    <p>You are not authorized to view this page. Please <a href="/login">Login</a>.</p>
+}
+else
+{
+    <EditForm Model="newCar" FormName="AddCarForm" OnValidSubmit="HandleValidSubmit" OnInvalidSubmit="HandleInvalidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-group">
+            <label for="make">Make</label>
+            <InputText id="make" class="form-control" @bind-Value="newCar.Make" />
+            <ValidationMessage For="@(() => newCar.Make)" />
+        </div>
+        <div class="form-group">
+            <label for="model">Model</label>
+            <InputText id="model" class="form-control" @bind-Value="newCar.Model" />
+            <ValidationMessage For="@(() => newCar.Model)" />
+        </div>
+        <div class="form-group">
+            <label for="year">Year</label>
+            <InputNumber id="year" class="form-control" @bind-Value="newCar.Year" />
+            <ValidationMessage For="@(() => newCar.Year)" />
+        </div>
+        <div class="form-group">
+            <label for="color">Color</label>
+            <InputText id="color" class="form-control" @bind-Value="newCar.Color" />
+            <ValidationMessage For="@(() => newCar.Color)" />
+        </div>
+        <div class="form-group">
+            <label for="licensePlate">License Plate</label>
+            <InputText id="licensePlate" class="form-control" @bind-Value="newCar.LicensePlate" />
+            <ValidationMessage For="@(() => newCar.LicensePlate)" />
+        </div>
+        <div class="form-group">
+            <label for="vin">VIN</label>
+            <InputText id="vin" class="form-control" @bind-Value="newCar.VIN" />
+            <ValidationMessage For="@(() => newCar.VIN)" />
+        </div>
+        <div class="form-group">
+            <label for="mileage">Mileage</label>
+            <InputNumber id="mileage" class="form-control" @bind-Value="newCar.Mileage" />
+            <ValidationMessage For="@(() => newCar.Mileage)" />
+        </div>
+        <div class="form-group">
+            <label for="inspectionDate">Inspection Date</label>
+            <InputDate id="inspectionDate" class="form-control" @bind-Value="newCar.InspectionDate" />
+            <ValidationMessage For="@(() => newCar.InspectionDate)" />
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-3">Add Car</button>
+    </EditForm>
+}
+
+@code {
+    [SupplyParameterFromForm(FormName = "AddCarForm")]
+    private Car? newCar { get; set; } = new();
+    private bool isAuthenticated = false;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        var user = HttpContextAccessor.HttpContext?.User;
+        isAuthenticated = user?.Identity?.IsAuthenticated ?? false;
+
+        if (!isAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+        }
+    }
+    private async Task HandleValidSubmit()
+    {
+        HandleSubmit();
+
+        var userIDString = HttpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.Sid);
+        if (int.TryParse(userIDString, out int userID))
+        {
+            newCar.UserId = userID;
+            await CarService.AddCarAsync(newCar);
+            Navigation.NavigateTo("/CarList");
+        }
+        else
+        {
+            logger.LogError("Invalid user ID format.");
+        }
+    }
+    private void HandleInvalidSubmit(EditContext editContext)
+    {
+        logger.LogWarning("Invalid form submission.");
+        foreach (var field in editContext.GetValidationMessages())
+        {
+            logger.LogWarning(field);
+        }
+    }
+    private void HandleSubmit()
+    {
+        logger.LogInformation($"Make: {newCar.Make}");
+        logger.LogInformation($"Model: {newCar.Model}");
+        logger.LogInformation($"Year: {newCar.Year}");
+        logger.LogInformation($"Color: {newCar.Color}");
+        logger.LogInformation($"License Plate: {newCar.LicensePlate}");
+        logger.LogInformation($"Vin: {newCar.VIN}");
+        logger.LogInformation($"Mileage: {newCar.Mileage}");
+        logger.LogInformation($"Inspection date: {newCar.InspectionDate}");
+    }
+}
+
